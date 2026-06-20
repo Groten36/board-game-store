@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HobbyLoch - Twój Sklep z Grami</title>
+    <style>
+        /* === RESET I ZMIENNE === */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        :root {
+            --primary-color: #2c3e50;
+            --accent-color: #e74c3c;
+            --bg-color: #f8f9fa;
+            --text-color: #333;
+        }
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+        }
+
+        /* === NAWIGACJA === */
+        header {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 1rem 5%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        header h1 {
+            font-size: 1.8rem;
+            letter-spacing: 2px;
+        }
+        nav ul {
+            list-style: none;
+            display: flex;
+            gap: 20px;
+        }
+        nav a {
+            color: white;
+            text-decoration: none;
+            font-weight: bold;
+            transition: color 0.3s;
+        }
+        nav a:hover {
+            color: var(--accent-color);
+        }
+        .cart {
+            background-color: var(--accent-color);
+            padding: 10px 20px;
+            border-radius: 5px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        /* === SEKCJA HERO (BANNer) === */
+        .hero {
+            background: linear-gradient(rgba(44, 62, 80, 0.8), rgba(44, 62, 80, 0.8)), url('https://images.unsplash.com/photo-1610890716171-6b1bb98ffaed?auto=format&fit=crop&q=80&w=1200') center/cover;
+            color: white;
+            text-align: center;
+            padding: 100px 20px;
+        }
+        .hero h2 {
+            font-size: 3rem;
+            margin-bottom: 20px;
+        }
+        .hero p {
+            font-size: 1.2rem;
+            margin-bottom: 30px;
+        }
+        .btn {
+            background-color: var(--accent-color);
+            color: white;
+            padding: 15px 30px;
+            text-decoration: none;
+            font-size: 1.1rem;
+            border-radius: 5px;
+            transition: background 0.3s;
+        }
+        .btn:hover {
+            background-color: #c0392b;
+        }
+
+        /* === KATALOG PRODUKTÓW === */
+        .container {
+            padding: 50px 5%;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .container h2 {
+            text-align: center;
+            margin-bottom: 40px;
+            font-size: 2.2rem;
+            color: var(--primary-color);
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 30px;
+        }
+        .card {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            text-align: center;
+            transition: transform 0.3s;
+        }
+        .card:hover {
+            transform: translateY(-5px);
+        }
+        .card .category {
+            font-size: 0.8rem;
+            color: #7f8c8d;
+            text-transform: uppercase;
+            margin-bottom: 10px;
+            display: block;
+        }
+        .card h3 {
+            font-size: 1.4rem;
+            margin-bottom: 15px;
+        }
+        .card .price {
+            font-size: 1.5rem;
+            color: var(--accent-color);
+            font-weight: bold;
+            margin-bottom: 15px;
+        }
+        .card button {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            width: 100%;
+            font-size: 1rem;
+            transition: background 0.3s;
+        }
+        .card button:hover {
+            background-color: #1a252f;
+        }
+
+        /* === STOPKA === */
+        footer {
+            background-color: var(--primary-color);
+            color: white;
+            text-align: center;
+            padding: 20px;
+            margin-top: 50px;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>🎲 HobbyLoch</h1>
+        <nav>
+            <ul>
+                <li><a href="#">Planszówki</a></li>
+                <li><a href="#">Bitewniaki</a></li>
+                <li><a href="#">Karcianki</a></li>
+                <li><a href="#">Akcesoria</a></li>
+            </ul>
+        </nav>
+        <div class="cart">🛒 Koszyk (0)</div>
+    </header>
+
+    <section class="hero">
+        <h2>Rzuć kością, rozpocznij przygodę!</h2>
+        <p>Najlepsze gry planszowe, figurkowe i karciane w galaktyce.</p>
+        <a href="#produkty" class="btn">Sprawdź nowości</a>
+    </section>
+
+    <div class="container" id="produkty">
+        <h2>Polecane produkty</h2>
+        <div class="grid" id="products-grid">
+            <p>Ładowanie asortymentu...</p>
+        </div>
+    </div>
+
+    <footer>
+        <p>&copy; 2026 HobbyLoch. Wszystkie prawa zastrzeżone.</p>
+    </footer>
+
+    <script>
+    // Asynchroniczne pobieranie danych z naszego backendu we Flasku
+    async function fetchProducts() {
+        const grid = document.getElementById('products-grid');
+
+        try {
+            // Uderzamy w endpoint zdefiniowany w app.py
+            const response = await fetch('/api/products');
+
+            if (!response.ok) {
+                throw new Error("Błąd z serwerem bazy danych.");
+            }
+
+            const products = await response.json();
+            renderProducts(products, grid);
+
+        } catch (error) {
+            grid.innerHTML = '<p>Błąd połączenia z serwerem. Czy na pewno odpaliłeś app.py?</p>';
+            console.error(error);
+        }
+    }
+
+    // Funkcja wstawiająca dane do HTML-a
+    function renderProducts(products, container) {
+        container.innerHTML = ''; // Czyścimy komunikat "Ładowanie..."
+
+        products.forEach(product => {
+            const card = document.createElement('div');
+            card.className = 'card';
+
+            // Mapujemy kolumny z bazy (v_katalog_produktow) na elementy HTML
+            card.innerHTML = `
+                <span class="category">${product.kategoria}</span>
+                <h3>${product.nazwa_gry}</h3>
+                <div class="price">${parseFloat(product.cena).toFixed(2)} zł</div>
+                <button onclick="addToCart('${product.produkt_id}')">Dodaj do koszyka</button>
+            `;
+            container.appendChild(card);
+        });
+    }
+
+    function addToCart(productId) {
+        alert("Wysłanie ID: " + productId + " do API, aby odpalić p_utworz_szybkie_zamowienie!");
+    }
+
+    // Uruchom pobieranie po wczytaniu strony
+    window.onload = fetchProducts;
+</script>
+</body>
+</html>
