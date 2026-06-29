@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rejestracja - HobbsToys</title>
+    <style>
+        /* === RESET I ZMIENNE === */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        :root {
+            --primary-color: #2c3e50;
+            --accent-color: #e74c3c;
+            --bg-color: #f8f9fa;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        .register-container {
+            background: white;
+            padding: 40px;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 400px;
+        }
+
+        .register-container h2 {
+            text-align: center;
+            color: var(--primary-color);
+            margin-bottom: 25px;
+            font-size: 1.8rem;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #555;
+            font-weight: bold;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-size: 1rem;
+            transition: border-color 0.3s;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: var(--primary-color);
+        }
+
+        button {
+            width: 100%;
+            padding: 12px;
+            background-color: var(--accent-color);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1.1rem;
+            font-weight: bold;
+            transition: background 0.3s;
+            margin-top: 10px;
+        }
+
+        button:hover {
+            background-color: #c0392b;
+        }
+
+        .message {
+            text-align: center;
+            margin-top: 15px;
+            font-weight: bold;
+            min-height: 24px; /* Zabezpieczenie przed "skakaniem" formularza */
+        }
+
+        .back-link {
+            display: block;
+            text-align: center;
+            margin-top: 25px;
+            text-decoration: none;
+            color: var(--primary-color);
+            font-weight: bold;
+        }
+
+        .back-link:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="register-container">
+        <h2>🎲 HobbsToys<br><span style="font-size: 1.2rem; color: #7f8c8d;">Dołącz do gry!</span></h2>
+
+        <form id="registerForm">
+            <div class="form-group">
+                <label for="name">Imię i nazwisko</label>
+                <input type="text" id="name" placeholder="np. Jan Kowalski" required>
+            </div>
+
+            <div class="form-group">
+                <label for="email">Adres e-mail</label>
+                <input type="email" id="email" placeholder="jan@example.com" required>
+            </div>
+
+            <div class="form-group">
+                <label for="password">Hasło</label>
+                <input type="password" id="password" placeholder="Min. 6 znaków" required minlength="6">
+            </div>
+
+            <button type="submit">Zarejestruj się</button>
+        </form>
+
+        <div id="statusMessage" class="message"></div>
+
+        <a href="/" class="back-link">← Wróć do sklepu</a>
+    </div>
+
+    <script>
+        document.getElementById('registerForm').addEventListener('submit', async function(event) {
+            // Blokujemy standardowe wysłanie formularza (przeładowanie strony)
+            event.preventDefault();
+
+            // Pobieramy dane z inputów
+            const nameValue = document.getElementById('name').value;
+            const emailValue = document.getElementById('email').value;
+            const passwordValue = document.getElementById('password').value;
+            const statusMessage = document.getElementById('statusMessage');
+
+            // Pokazujemy komunikat o ładowaniu
+            statusMessage.style.color = "#3498db";
+            statusMessage.innerText = "Tworzenie konta...";
+
+            try {
+                // Wysyłamy dane formacie JSON na nasz endpoint /api/register
+                const response = await fetch('/api/register', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        name: nameValue,
+                        email: emailValue,
+                        password: passwordValue
+                    })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    // Sukces (kod 201 Created)
+                    statusMessage.style.color = "#27ae60"; // Zielony
+                    statusMessage.innerText = data.message + " Za chwilę zostaniesz przekierowany...";
+
+                    // Czyścimy zawartość formularza
+                    document.getElementById('registerForm').reset();
+
+                    // Po 2.5 sekundach odsyłamy klienta z powrotem na stronę główną
+                    setTimeout(() => {
+                        window.location.href = '/';
+                    }, 2500);
+                } else {
+                    // Błąd walidacji lub email już zajęty (kody 400, 409, 500)
+                    statusMessage.style.color = "#e74c3c"; // Czerwony
+                    statusMessage.innerText = data.message;
+                }
+            } catch (error) {
+                console.error("Błąd połączenia z serwerem:", error);
+                statusMessage.style.color = "#e74c3c";
+                statusMessage.innerText = "Błąd połączenia z serwerem. Upewnij się, że app.py działa.";
+            }
+        });
+    </script>
+</body>
+</html>
