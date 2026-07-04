@@ -14,16 +14,21 @@ HobbToys — sklep internetowy z grami planszowymi, bitewnymi i karcianymi. Apli
 
 ### Kroki
 
-1. Zainstaluj zależności:
+1. (Opcjonalnie) utwórz i aktywuj wirtualne środowisko:
    ```
-   pip install Flask Flask-Bcrypt mysql-connector-python PyJWT
+   python -m venv .venv
+   .venv\Scripts\activate
    ```
-2. Upewnij się, że MySQL działa lokalnie, a dane dostępowe w funkcji `get_db_connection()` w `app.py` (host, użytkownik, hasło, baza) pasują do Twojej konfiguracji.
-3. Uruchom aplikację:
+2. Zainstaluj zależności:
+   ```
+   pip install -r requirements.txt
+   ```
+3. Upewnij się, że MySQL działa lokalnie, a dane dostępowe w funkcji `get_db_connection()` w `app.py` (host, użytkownik, hasło, baza) pasują do Twojej konfiguracji.
+4. Uruchom aplikację:
    ```
    python app.py
    ```
-4. Otwórz w przeglądarce: http://127.0.0.1:5000
+5. Otwórz w przeglądarce: http://127.0.0.1:5000
 
 ## Funkcjonalności
 
@@ -58,6 +63,8 @@ HobbToys — sklep internetowy z grami planszowymi, bitewnymi i karcianymi. Apli
 - Lista wszystkich produktów
 - Dodawanie, edycja i usuwanie produktów (nazwa, opis, cena, stan magazynowy, kategoria, wydawca)
 - Przy dodawaniu/edycji produktu można podać nowego wydawcę — zostanie automatycznie dodany do bazy (bez duplikatów)
+- Lista wszystkich zarejestrowanych użytkowników (imię i nazwisko, email, telefon, rola)
+- Zmiana roli użytkownika (user/admin) oraz usuwanie kont — admin nie może zmienić roli ani usunąć własnego konta; użytkownika z zamówieniami chroni klucz obcy
 
 ## API
 
@@ -72,3 +79,6 @@ HobbToys — sklep internetowy z grami planszowymi, bitewnymi i karcianymi. Apli
 | GET/PUT | `/api/user/profile` | zalogowany | odczyt/edycja danych osobowych |
 | GET/POST | `/api/admin/products` | admin | lista/dodanie produktu |
 | PUT/DELETE | `/api/admin/products/<id>` | admin | edycja/usunięcie produktu |
+| GET | `/api/admin/users` | admin | lista wszystkich użytkowników |
+| PUT | `/api/admin/users/<id>/role` | admin | zmiana roli użytkownika (user/admin) |
+| DELETE | `/api/admin/users/<id>` | admin | usunięcie użytkownika |

@@ -181,6 +181,12 @@
             <h2>Produkty</h2>
             <div id="products">Ładowanie produktów...</div>
         </div>
+
+        <div class="panel">
+            <h2>Użytkownicy</h2>
+            <div id="users">Ładowanie użytkowników...</div>
+            <div id="usersMessage" class="message"></div>
+        </div>
     </div>
 
     <script>
@@ -364,9 +370,110 @@
             }
         }
 
+        // Id zalogowanego admina z payloadu tokena JWT (do oznaczenia własnego wiersza)
+        function myUserId() {
+            try {
+                return JSON.parse(atob(token.split('.')[1])).user_id;
+            } catch (error) {
+                return null;
+            }
+        }
+
+        async function loadUsers() {
+            const usersDiv = document.getElementById('users');
+            try {
+                const response = await fetch('/api/admin/users', { headers: authHeaders() });
+                if (handleUnauthorized(response)) return;
+                const users = await response.json();
+
+                if (!users.length) {
+                    usersDiv.innerHTML = '<p>Brak użytkowników w bazie.</p>';
+                    return;
+                }
+
+                const myId = myUserId();
+                const rows = users.map(u => {
+                    const actions = u.id === myId
+                        ? '(Ty)'
+                        : `
+                            <button class="btn btn-edit" onclick="toggleRole('${u.id}', '${u.role}')">
+                                ${u.role === 'admin' ? 'Odbierz admina' : 'Nadaj admina'}
+                            </button>
+                            <button class="btn btn-delete" onclick="deleteUser('${u.id}')">Usuń</button>
+                        `;
+                    return `
+                        <tr>
+                            <td>${u.name}</td>
+                            <td>${u.email}</td>
+                            <td>${u.phone || '—'}</td>
+                            <td>${u.role}</td>
+                            <td>${actions}</td>
+                        </tr>
+                    `;
+                }).join('');
+
+                usersDiv.innerHTML = `
+                    <table>
+                        <tr><th>Imię i nazwisko</th><th>Email</th><th>Telefon</th><th>Rola</th><th>Akcje</th></tr>
+                        ${rows}
+                    </table>
+                `;
+            } catch (error) {
+                usersDiv.innerHTML = '<p>Błąd pobierania użytkowników.</p>';
+                console.error(error);
+            }
+        }
+
+        async function toggleRole(id, currentRole) {
+            const newRole = currentRole === 'admin' ? 'user' : 'admin';
+            if (!confirm(`Na pewno zmienić rolę tego użytkownika na "${newRole}"?`)) return;
+            const message = document.getElementById('usersMessage');
+
+            try {
+                const response = await fetch('/api/admin/users/' + id + '/role', {
+                    method: 'PUT',
+                    headers: authHeaders(),
+                    body: JSON.stringify({ role: newRole })
+                });
+                if (handleUnauthorized(response)) return;
+                const data = await response.json();
+
+                message.style.color = response.ok ? "#27ae60" : "#e74c3c";
+                message.innerText = data.message;
+                if (response.ok) loadUsers();
+            } catch (error) {
+                message.style.color = "#e74c3c";
+                message.innerText = "Błąd połączenia z serwerem.";
+                console.error(error);
+            }
+        }
+
+        async function deleteUser(id) {
+            if (!confirm('Na pewno usunąć tego użytkownika?')) return;
+            const message = document.getElementById('usersMessage');
+
+            try {
+                const response = await fetch('/api/admin/users/' + id, {
+                    method: 'DELETE',
+                    headers: authHeaders()
+                });
+                if (handleUnauthorized(response)) return;
+                const data = await response.json();
+
+                message.style.color = response.ok ? "#27ae60" : "#e74c3c";
+                message.innerText = data.message;
+                if (response.ok) loadUsers();
+            } catch (error) {
+                message.style.color = "#e74c3c";
+                message.innerText = "Błąd połączenia z serwerem.";
+                console.error(error);
+            }
+        }
+
         loadSelect('/api/categories', 'category');
         loadSelect('/api/publishers', 'publisher');
         loadProducts();
+        loadUsers();
     </script>
 </body>
 </html>

@@ -445,6 +445,84 @@ def admin_delete_product(current_user_id, current_user_role, product_id):
     finally:
         cursor.close()
         conn.close()
+
+
+@app.route('/api/admin/users', methods=['GET'])
+@token_required
+def admin_get_users(current_user_id, current_user_role):
+    denied = admin_only(current_user_role)
+    if denied:
+        return denied
+
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+    try:
+        cursor.execute("SELECT id, name, email, phone, role FROM customers ORDER BY name")
+        return jsonify(cursor.fetchall())
+    finally:
+        cursor.close()
+        conn.close()
+
+
+@app.route('/api/admin/users/<user_id>/role', methods=['PUT'])
+@token_required
+def admin_update_user_role(current_user_id, current_user_role, user_id):
+    denied = admin_only(current_user_role)
+    if denied:
+        return denied
+
+    if user_id == current_user_id:
+        return jsonify({'message': 'Nie możesz zmienić roli własnego konta.'}), 400
+
+    data = request.json
+    new_role = data.get('role') if data else None
+    if new_role not in ('user', 'admin'):
+        return jsonify({'message': "Nieprawidłowa rola (dozwolone: 'user', 'admin')."}), 400
+
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+    try:
+        cursor.execute("SELECT id FROM customers WHERE id = %s", (user_id,))
+        if not cursor.fetchone():
+            return jsonify({'message': 'Nie znaleziono użytkownika.'}), 404
+
+        cursor.execute("UPDATE customers SET role = %s WHERE id = %s", (new_role, user_id))
+        conn.commit()
+        return jsonify({'message': 'Rola została zmieniona!'})
+    except Exception as e:
+        conn.rollback()
+        return jsonify({'message': 'Błąd zmiany roli.', 'error': str(e)}), 500
+    finally:
+        cursor.close()
+        conn.close()
+
+
+@app.route('/api/admin/users/<user_id>', methods=['DELETE'])
+@token_required
+def admin_delete_user(current_user_id, current_user_role, user_id):
+    denied = admin_only(current_user_role)
+    if denied:
+        return denied
+
+    if user_id == current_user_id:
+        return jsonify({'message': 'Nie możesz usunąć własnego konta.'}), 400
+
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+    try:
+        cursor.execute("DELETE FROM customers WHERE id = %s", (user_id,))
+        if cursor.rowcount == 0:
+            return jsonify({'message': 'Nie znaleziono użytkownika.'}), 404
+        conn.commit()
+        return jsonify({'message': 'Użytkownik został usunięty!'})
+    except Exception as e:
+        conn.rollback()
+        return jsonify({'message': 'Błąd usuwania użytkownika (może mieć złożone zamówienia).', 'error': str(e)}), 500
+    finally:
+        cursor.close()
+        conn.close()
+
+
 @app.route('/')
 def starting_page():  # put application's code here
     return render_template('starting_page.html')
