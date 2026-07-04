@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Rejestracja - HobbToys</title>
+    <title>Logowanie - HobbToys</title>
     <style>
         /* === RESET I ZMIENNE === */
         * {
@@ -26,7 +26,7 @@
             height: 100vh;
         }
 
-        .register-container {
+        .login-container {
             background: white;
             padding: 40px;
             border-radius: 10px;
@@ -35,7 +35,7 @@
             max-width: 400px;
         }
 
-        .register-container h2 {
+        .login-container h2 {
             text-align: center;
             color: var(--primary-color);
             margin-bottom: 25px;
@@ -108,15 +108,10 @@
 </head>
 <body>
 
-    <div class="register-container">
-        <h2>🎲 HobbToys<br><span style="font-size: 1.2rem; color: #7f8c8d;">Dołącz do gry!</span></h2>
+    <div class="login-container">
+        <h2>🎲 HobbToys<br><span style="font-size: 1.2rem; color: #7f8c8d;">Zaloguj się</span></h2>
 
-        <form id="registerForm">
-            <div class="form-group">
-                <label for="name">Imię i nazwisko</label>
-                <input type="text" id="name" placeholder="np. Jan Kowalski" required>
-            </div>
-
+        <form id="loginForm">
             <div class="form-group">
                 <label for="email">Adres e-mail</label>
                 <input type="email" id="email" placeholder="jan@example.com" required>
@@ -124,41 +119,38 @@
 
             <div class="form-group">
                 <label for="password">Hasło</label>
-                <input type="password" id="password" placeholder="Min. 6 znaków" required minlength="6">
+                <input type="password" id="password" required>
             </div>
 
-            <button type="submit">Zarejestruj się</button>
+            <button type="submit">Zaloguj się</button>
         </form>
 
         <div id="statusMessage" class="message"></div>
 
+        <a href="/register_page" class="back-link">Nie masz konta? Zarejestruj się</a>
         <a href="/" class="back-link">← Wróć do sklepu</a>
     </div>
 
     <script>
-        document.getElementById('registerForm').addEventListener('submit', async function(event) {
+        document.getElementById('loginForm').addEventListener('submit', async function(event) {
             // Blokujemy standardowe wysłanie formularza (przeładowanie strony)
             event.preventDefault();
 
-            // Pobieramy dane z inputów
-            const nameValue = document.getElementById('name').value;
             const emailValue = document.getElementById('email').value;
             const passwordValue = document.getElementById('password').value;
             const statusMessage = document.getElementById('statusMessage');
 
-            // Pokazujemy komunikat o ładowaniu
             statusMessage.style.color = "#3498db";
-            statusMessage.innerText = "Tworzenie konta...";
+            statusMessage.innerText = "Logowanie...";
 
             try {
-                // Wysyłamy dane formacie JSON na nasz endpoint /api/register
-                const response = await fetch('/api/register', {
+                // Wysyłamy dane w formacie JSON na endpoint /api/login
+                const response = await fetch('/api/login', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
-                        name: nameValue,
                         email: emailValue,
                         password: passwordValue
                     })
@@ -167,19 +159,20 @@
                 const data = await response.json();
 
                 if (response.ok) {
-                    // Sukces (kod 201 Created)
+                    // Zapisujemy token JWT, aby używać go przy żądaniach do API
+                    localStorage.setItem('token', data.token);
+                    localStorage.setItem('role', data.role);
+
                     statusMessage.style.color = "#27ae60"; // Zielony
-                    statusMessage.innerText = data.message + " Za chwilę zostaniesz przekierowany do logowania...";
+                    statusMessage.innerText = "Zalogowano pomyślnie! Przekierowanie...";
 
-                    // Czyścimy zawartość formularza
-                    document.getElementById('registerForm').reset();
-
-                    // Po 2.5 sekundach odsyłamy klienta na stronę logowania
+                    // Admin trafia do panelu administratora, zwykły użytkownik na swój ekran
+                    const target = data.role === 'admin' ? '/admin' : '/account';
                     setTimeout(() => {
-                        window.location.href = '/login_page';
-                    }, 2500);
+                        window.location.href = target;
+                    }, 1500);
                 } else {
-                    // Błąd walidacji lub email już zajęty (kody 400, 409, 500)
+                    // Błędny email lub hasło (kod 401)
                     statusMessage.style.color = "#e74c3c"; // Czerwony
                     statusMessage.innerText = data.message;
                 }

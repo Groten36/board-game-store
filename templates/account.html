@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Moje konto - HobbToys</title>
+    <style>
+        /* === RESET I ZMIENNE === */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        :root {
+            --primary-color: #2c3e50;
+            --accent-color: #e74c3c;
+            --bg-color: #f8f9fa;
+            --text-color: #333;
+        }
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+        }
+
+        header {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 1rem 5%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        header h1 {
+            font-size: 1.8rem;
+            letter-spacing: 2px;
+        }
+        .logout-btn {
+            color: white;
+            text-decoration: none;
+            font-weight: bold;
+            padding: 10px 20px;
+            border: 2px solid white;
+            border-radius: 5px;
+            cursor: pointer;
+            background: none;
+            font-size: 1rem;
+            width: auto;
+            margin: 0;
+            transition: background 0.3s, color 0.3s;
+        }
+        .logout-btn:hover {
+            background-color: white;
+            color: var(--primary-color);
+        }
+
+        .container {
+            padding: 40px 5%;
+            max-width: 900px;
+            margin: 0 auto;
+        }
+        .panel {
+            background: white;
+            border-radius: 10px;
+            padding: 30px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+        }
+        .panel h2 {
+            color: var(--primary-color);
+            margin-bottom: 20px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            text-align: left;
+            padding: 12px;
+            border-bottom: 1px solid #eee;
+        }
+        th {
+            color: var(--primary-color);
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #555;
+            font-weight: bold;
+        }
+        .form-group input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-size: 1rem;
+        }
+        .form-group input:focus {
+            outline: none;
+            border-color: var(--primary-color);
+        }
+        .save-btn {
+            padding: 12px 30px;
+            background-color: var(--accent-color);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1.1rem;
+            font-weight: bold;
+            transition: background 0.3s;
+        }
+        .save-btn:hover {
+            background-color: #c0392b;
+        }
+        .message {
+            margin-top: 15px;
+            font-weight: bold;
+            min-height: 24px;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>🎲 Moje konto</h1>
+        <div>
+            <a href="/" class="logout-btn" style="margin-right: 10px;">Sklep</a>
+            <button class="logout-btn" onclick="logout()">Wyloguj</button>
+        </div>
+    </header>
+
+    <div class="container">
+        <div class="panel">
+            <h2>Moje zamówienia</h2>
+            <div id="orders">Ładowanie zamówień...</div>
+        </div>
+
+        <div class="panel">
+            <h2>Moje dane</h2>
+            <form id="profileForm">
+                <div class="form-group">
+                    <label for="name">Imię i nazwisko</label>
+                    <input type="text" id="name" required>
+                </div>
+                <div class="form-group">
+                    <label for="email">Adres e-mail</label>
+                    <input type="email" id="email" required>
+                </div>
+                <div class="form-group">
+                    <label for="phone">Numer telefonu</label>
+                    <input type="tel" id="phone" placeholder="np. 600 100 200">
+                </div>
+                <button type="submit" class="save-btn">Zapisz zmiany</button>
+            </form>
+            <div id="profileMessage" class="message"></div>
+        </div>
+    </div>
+
+    <script>
+        const token = localStorage.getItem('token');
+        // Bez tokena nie ma czego wyświetlać - odsyłamy do logowania
+        if (!token) {
+            window.location.href = '/login_page';
+        }
+
+        function authHeaders() {
+            return {
+                'Authorization': 'Bearer ' + token,
+                'Content-Type': 'application/json'
+            };
+        }
+
+        function logout() {
+            localStorage.removeItem('token');
+            localStorage.removeItem('role');
+            window.location.href = '/';
+        }
+
+        // Wygasły/nieważny token = powrót do logowania
+        function handleUnauthorized(response) {
+            if (response.status === 401) {
+                logout();
+                return true;
+            }
+            return false;
+        }
+
+        async function loadOrders() {
+            const ordersDiv = document.getElementById('orders');
+            try {
+                const response = await fetch('/api/user/orders', { headers: authHeaders() });
+                if (handleUnauthorized(response)) return;
+                const orders = await response.json();
+
+                if (!orders.length) {
+                    ordersDiv.innerHTML = '<p>Nie masz jeszcze żadnych zamówień.</p>';
+                    return;
+                }
+
+                let rows = orders.map(o => `
+                    <tr>
+                        <td>${new Date(o.created_at).toLocaleDateString('pl-PL')}</td>
+                        <td>${o.status}</td>
+                        <td>${o.liczba_przedmiotow}</td>
+                        <td>${parseFloat(o.wartosc).toFixed(2)} zł</td>
+                    </tr>
+                `).join('');
+
+                ordersDiv.innerHTML = `
+                    <table>
+                        <tr><th>Data</th><th>Status</th><th>Liczba przedmiotów</th><th>Wartość</th></tr>
+                        ${rows}
+                    </table>
+                `;
+            } catch (error) {
+                ordersDiv.innerHTML = '<p>Błąd pobierania zamówień.</p>';
+                console.error(error);
+            }
+        }
+
+        async function loadProfile() {
+            try {
+                const response = await fetch('/api/user/profile', { headers: authHeaders() });
+                if (handleUnauthorized(response)) return;
+                const user = await response.json();
+
+                document.getElementById('name').value = user.name || '';
+                document.getElementById('email').value = user.email || '';
+                document.getElementById('phone').value = user.phone || '';
+            } catch (error) {
+                console.error(error);
+            }
+        }
+
+        document.getElementById('profileForm').addEventListener('submit', async function(event) {
+            event.preventDefault();
+            const message = document.getElementById('profileMessage');
+            message.style.color = "#3498db";
+            message.innerText = "Zapisywanie...";
+
+            try {
+                const response = await fetch('/api/user/profile', {
+                    method: 'PUT',
+                    headers: authHeaders(),
+                    body: JSON.stringify({
+                        name: document.getElementById('name').value,
+                        email: document.getElementById('email').value,
+                        phone: document.getElementById('phone').value
+                    })
+                });
+                if (handleUnauthorized(response)) return;
+                const data = await response.json();
+
+                message.style.color = response.ok ? "#27ae60" : "#e74c3c";
+                message.innerText = data.message;
+            } catch (error) {
+                message.style.color = "#e74c3c";
+                message.innerText = "Błąd połączenia z serwerem.";
+                console.error(error);
+            }
+        });
+
+        loadOrders();
+        loadProfile();
+    </script>
+</body>
+</html>

@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel administratora - HobbToys</title>
+    <style>
+        /* === RESET I ZMIENNE === */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        :root {
+            --primary-color: #2c3e50;
+            --accent-color: #e74c3c;
+            --bg-color: #f8f9fa;
+            --text-color: #333;
+        }
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+        }
+
+        header {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 1rem 5%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        header h1 {
+            font-size: 1.8rem;
+            letter-spacing: 2px;
+        }
+        .logout-btn {
+            color: white;
+            text-decoration: none;
+            font-weight: bold;
+            padding: 10px 20px;
+            border: 2px solid white;
+            border-radius: 5px;
+            cursor: pointer;
+            background: none;
+            font-size: 1rem;
+            transition: background 0.3s, color 0.3s;
+        }
+        .logout-btn:hover {
+            background-color: white;
+            color: var(--primary-color);
+        }
+
+        .container {
+            padding: 40px 5%;
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+        .panel {
+            background: white;
+            border-radius: 10px;
+            padding: 30px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+        }
+        .panel h2 {
+            color: var(--primary-color);
+            margin-bottom: 20px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            text-align: left;
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+        }
+        th {
+            color: var(--primary-color);
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 6px;
+            color: #555;
+            font-weight: bold;
+        }
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-size: 1rem;
+        }
+
+        .btn {
+            padding: 10px 25px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: bold;
+            color: white;
+            transition: background 0.3s;
+        }
+        .btn-save { background-color: var(--accent-color); }
+        .btn-save:hover { background-color: #c0392b; }
+        .btn-cancel { background-color: #7f8c8d; margin-left: 10px; }
+        .btn-edit { background-color: var(--primary-color); padding: 6px 14px; }
+        .btn-delete { background-color: var(--accent-color); padding: 6px 14px; margin-left: 5px; }
+
+        .message {
+            margin-top: 15px;
+            font-weight: bold;
+            min-height: 24px;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>🎲 Panel administratora</h1>
+        <div>
+            <a href="/" class="logout-btn" style="margin-right: 10px;">Sklep</a>
+            <button class="logout-btn" onclick="logout()">Wyloguj</button>
+        </div>
+    </header>
+
+    <div class="container">
+        <div class="panel">
+            <h2 id="formTitle">Dodaj produkt</h2>
+            <form id="productForm">
+                <input type="hidden" id="productId">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="name">Nazwa</label>
+                        <input type="text" id="name" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="price">Cena (zł)</label>
+                        <input type="number" id="price" step="0.01" min="0" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="stock">Stan magazynowy</label>
+                        <input type="number" id="stock" min="0" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="category">Kategoria</label>
+                        <select id="category" required></select>
+                    </div>
+                    <div class="form-group">
+                        <label for="publisher">Wydawca</label>
+                        <select id="publisher" required onchange="toggleNewPublisher()"></select>
+                    </div>
+                    <div class="form-group" id="newPublisherGroup" style="display:none">
+                        <label for="newPublisherName">Nazwa nowego wydawcy</label>
+                        <input type="text" id="newPublisherName" placeholder="np. Rebel">
+                    </div>
+                    <div class="form-group">
+                        <label for="description">Opis</label>
+                        <input type="text" id="description">
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-save" id="saveBtn">Dodaj produkt</button>
+                <button type="button" class="btn btn-cancel" id="cancelBtn" style="display:none" onclick="resetForm()">Anuluj edycję</button>
+            </form>
+            <div id="formMessage" class="message"></div>
+        </div>
+
+        <div class="panel">
+            <h2>Produkty</h2>
+            <div id="products">Ładowanie produktów...</div>
+        </div>
+    </div>
+
+    <script>
+        const token = localStorage.getItem('token');
+        // Panel tylko dla zalogowanego admina (backend i tak weryfikuje rolę przy każdym żądaniu)
+        if (!token || localStorage.getItem('role') !== 'admin') {
+            window.location.href = '/login_page';
+        }
+
+        let productsCache = [];
+
+        function authHeaders() {
+            return {
+                'Authorization': 'Bearer ' + token,
+                'Content-Type': 'application/json'
+            };
+        }
+
+        function logout() {
+            localStorage.removeItem('token');
+            localStorage.removeItem('role');
+            window.location.href = '/';
+        }
+
+        function handleUnauthorized(response) {
+            if (response.status === 401 || response.status === 403) {
+                logout();
+                return true;
+            }
+            return false;
+        }
+
+        async function loadSelect(url, selectId) {
+            const response = await fetch(url);
+            const items = await response.json();
+            const select = document.getElementById(selectId);
+            select.innerHTML = items.map(i => `<option value="${i.id}">${i.name}</option>`).join('');
+            // W liście wydawców dodatkowa opcja pozwalająca dopisać nowego do bazy
+            if (selectId === 'publisher') {
+                select.innerHTML += '<option value="__new__">+ Nowy wydawca…</option>';
+                toggleNewPublisher();
+            }
+        }
+
+        // Pokazuje pole na nazwę tylko po wybraniu "+ Nowy wydawca…"
+        function toggleNewPublisher() {
+            const isNew = document.getElementById('publisher').value === '__new__';
+            document.getElementById('newPublisherGroup').style.display = isNew ? 'block' : 'none';
+            document.getElementById('newPublisherName').required = isNew;
+        }
+
+        async function loadProducts() {
+            const productsDiv = document.getElementById('products');
+            try {
+                const response = await fetch('/api/admin/products', { headers: authHeaders() });
+                if (handleUnauthorized(response)) return;
+                productsCache = await response.json();
+
+                if (!productsCache.length) {
+                    productsDiv.innerHTML = '<p>Brak produktów w bazie.</p>';
+                    return;
+                }
+
+                const rows = productsCache.map(p => `
+                    <tr>
+                        <td>${p.name}</td>
+                        <td>${parseFloat(p.price).toFixed(2)} zł</td>
+                        <td>${p.stock_quantity}</td>
+                        <td>
+                            <button class="btn btn-edit" onclick="startEdit('${p.id}')">Edytuj</button>
+                            <button class="btn btn-delete" onclick="deleteProduct('${p.id}')">Usuń</button>
+                        </td>
+                    </tr>
+                `).join('');
+
+                productsDiv.innerHTML = `
+                    <table>
+                        <tr><th>Nazwa</th><th>Cena</th><th>Stan</th><th>Akcje</th></tr>
+                        ${rows}
+                    </table>
+                `;
+            } catch (error) {
+                productsDiv.innerHTML = '<p>Błąd pobierania produktów.</p>';
+                console.error(error);
+            }
+        }
+
+        function startEdit(id) {
+            const p = productsCache.find(x => x.id === id);
+            if (!p) return;
+
+            document.getElementById('productId').value = p.id;
+            document.getElementById('name').value = p.name;
+            document.getElementById('price').value = p.price;
+            document.getElementById('stock').value = p.stock_quantity;
+            document.getElementById('category').value = p.category_id;
+            document.getElementById('publisher').value = p.publisher_id;
+            document.getElementById('description').value = p.description || '';
+
+            document.getElementById('formTitle').innerText = 'Edytuj produkt';
+            document.getElementById('saveBtn').innerText = 'Zapisz zmiany';
+            document.getElementById('cancelBtn').style.display = 'inline-block';
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function resetForm() {
+            document.getElementById('productForm').reset();
+            document.getElementById('productId').value = '';
+            document.getElementById('formTitle').innerText = 'Dodaj produkt';
+            document.getElementById('saveBtn').innerText = 'Dodaj produkt';
+            document.getElementById('cancelBtn').style.display = 'none';
+        }
+
+        document.getElementById('productForm').addEventListener('submit', async function(event) {
+            event.preventDefault();
+            const message = document.getElementById('formMessage');
+            const editedId = document.getElementById('productId').value;
+
+            const publisherValue = document.getElementById('publisher').value;
+            const payload = {
+                name: document.getElementById('name').value,
+                price: document.getElementById('price').value,
+                stock_quantity: document.getElementById('stock').value,
+                category_id: document.getElementById('category').value,
+                description: document.getElementById('description').value
+            };
+            // "+ Nowy wydawca…" -> wysyłamy nazwę, backend doda wydawcę do bazy
+            if (publisherValue === '__new__') {
+                payload.publisher_name = document.getElementById('newPublisherName').value;
+            } else {
+                payload.publisher_id = publisherValue;
+            }
+
+            const url = editedId ? '/api/admin/products/' + editedId : '/api/admin/products';
+            const method = editedId ? 'PUT' : 'POST';
+
+            try {
+                const response = await fetch(url, {
+                    method: method,
+                    headers: authHeaders(),
+                    body: JSON.stringify(payload)
+                });
+                if (handleUnauthorized(response)) return;
+                const data = await response.json();
+
+                message.style.color = response.ok ? "#27ae60" : "#e74c3c";
+                message.innerText = data.message;
+
+                if (response.ok) {
+                    resetForm();
+                    loadProducts();
+                    // Odświeżamy listę wydawców - mógł dojść nowy
+                    loadSelect('/api/publishers', 'publisher');
+                }
+            } catch (error) {
+                message.style.color = "#e74c3c";
+                message.innerText = "Błąd połączenia z serwerem.";
+                console.error(error);
+            }
+        });
+
+        async function deleteProduct(id) {
+            if (!confirm('Na pewno usunąć ten produkt?')) return;
+            const message = document.getElementById('formMessage');
+
+            try {
+                const response = await fetch('/api/admin/products/' + id, {
+                    method: 'DELETE',
+                    headers: authHeaders()
+                });
+                if (handleUnauthorized(response)) return;
+                const data = await response.json();
+
+                message.style.color = response.ok ? "#27ae60" : "#e74c3c";
+                message.innerText = data.message;
+                if (response.ok) loadProducts();
+            } catch (error) {
+                message.style.color = "#e74c3c";
+                message.innerText = "Błąd połączenia z serwerem.";
+                console.error(error);
+            }
+        }
+
+        loadSelect('/api/categories', 'category');
+        loadSelect('/api/publishers', 'publisher');
+        loadProducts();
+    </script>
+</body>
+</html>

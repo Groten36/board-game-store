@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HobbsToys - Twój Sklep z Grami</title>
+    <title>HobbToys - Twój Sklep z Grami</title>
     <style>
         /* === RESET I ZMIENNE === */
         * {
@@ -58,6 +58,24 @@
             font-weight: bold;
             cursor: pointer;
         }
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        .auth-btn {
+            color: white;
+            text-decoration: none;
+            font-weight: bold;
+            padding: 10px 20px;
+            border: 2px solid white;
+            border-radius: 5px;
+            transition: background 0.3s, color 0.3s;
+        }
+        .auth-btn:hover {
+            background-color: white;
+            color: var(--primary-color);
+        }
 
         /* === SEKCJA HERO (BANNer) === */
         .hero {
@@ -85,6 +103,27 @@
         }
         .btn:hover {
             background-color: #c0392b;
+        }
+        .search-form {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            max-width: 500px;
+            margin: 0 auto;
+        }
+        .search-form input {
+            flex: 1;
+            padding: 15px;
+            border: none;
+            border-radius: 5px;
+            font-size: 1.1rem;
+        }
+        .search-form input:focus {
+            outline: 2px solid var(--accent-color);
+        }
+        .search-form .btn {
+            border: none;
+            cursor: pointer;
         }
 
         /* === KATALOG PRODUKTÓW === */
@@ -160,36 +199,48 @@
 <body>
 
     <header>
-        <h1>🎲 HobbsToys</h1>
+        <h1>🎲 HobbToys</h1>
         <nav>
             <ul>
-                <li><a href="#">Planszówki</a></li>
-                <li><a href="#">Bitewniaki</a></li>
-                <li><a href="#">Karcianki</a></li>
-                <li><a href="#">Akcesoria</a></li>
+                <li><a href="#produkty" onclick="filterProducts(null, 'Polecane produkty')">Wszystkie</a></li>
+                <li><a href="#produkty" onclick="filterProducts('Gry Planszowe Stratgiczne', 'Planszówki')">Planszówki</a></li>
+                <li><a href="#produkty" onclick="filterProducts('Gry Figurowe i Bitewne', 'Bitewniaki')">Bitewniaki</a></li>
+                <li><a href="#produkty" onclick="filterProducts('Gry Karciane', 'Karcianki')">Karcianki</a></li>
+                <li><a href="#produkty" onclick="filterProducts('Akcesoria modelarskie i kości', 'Akcesoria')">Akcesoria</a></li>
             </ul>
         </nav>
-        <div class="cart">🛒 Koszyk (0)</div>
+        <div class="header-actions">
+            <a href="/account" class="auth-btn" id="accountBtn" style="display:none">Moje konto</a>
+            <a href="/login_page" class="auth-btn" id="authBtn">Zaloguj się</a>
+            <a href="/register_page" class="auth-btn" id="registerBtn">Rejestracja</a>
+            <div class="cart" id="cartBtn" onclick="window.location.href='/cart'">🛒 Koszyk (0)</div>
+        </div>
     </header>
 
     <section class="hero">
         <h2>Rzuć kością, rozpocznij przygodę!</h2>
         <p>Najlepsze gry planszowe, figurkowe i karciane w galaktyce.</p>
-        <a href="#produkty" class="btn">Sprawdź nowości</a>
+        <form class="search-form" onsubmit="searchProducts(event)">
+            <input type="text" id="search-input" placeholder="Szukaj gry po nazwie...">
+            <button type="submit" class="btn">Szukaj</button>
+        </form>
     </section>
 
     <div class="container" id="produkty">
-        <h2>Polecane produkty</h2>
+        <h2 id="catalog-title">Polecane produkty</h2>
         <div class="grid" id="products-grid">
             <p>Ładowanie asortymentu...</p>
         </div>
     </div>
 
     <footer>
-        <p>&copy; 2026 HobbyLoch. Wszystkie prawa zastrzeżone.</p>
+        <p>&copy; 2026 HobbToys. Wszystkie prawa zastrzeżone.</p>
     </footer>
 
     <script>
+    // Wszystkie produkty trzymamy w pamięci, żeby filtrować bez kolejnych zapytań
+    let allProducts = [];
+
     // Asynchroniczne pobieranie danych z naszego backendu we Flasku
     async function fetchProducts() {
         const grid = document.getElementById('products-grid');
@@ -202,13 +253,51 @@
                 throw new Error("Błąd z serwerem bazy danych.");
             }
 
-            const products = await response.json();
-            renderProducts(products, grid);
+            allProducts = await response.json();
+            renderProducts(allProducts, grid);
 
         } catch (error) {
             grid.innerHTML = '<p>Błąd połączenia z serwerem. Czy na pewno odpaliłeś app.py?</p>';
             console.error(error);
         }
+    }
+
+    // Wyszukiwanie produktów po nazwie (bez rozróżniania wielkości liter)
+    function searchProducts(event) {
+        event.preventDefault();
+        const grid = document.getElementById('products-grid');
+        const query = document.getElementById('search-input').value.trim().toLowerCase();
+
+        if (!query) {
+            filterProducts(null, 'Polecane produkty');
+            return;
+        }
+
+        document.getElementById('catalog-title').innerText = 'Wyniki wyszukiwania: "' + document.getElementById('search-input').value.trim() + '"';
+        const found = allProducts.filter(p => p.nazwa_gry.toLowerCase().includes(query));
+
+        if (!found.length) {
+            grid.innerHTML = '<p>Nie znaleziono produktów o podanej nazwie.</p>';
+        } else {
+            renderProducts(found, grid);
+        }
+        document.getElementById('produkty').scrollIntoView({ behavior: 'smooth' });
+    }
+
+    // Filtrowanie katalogu po nazwie kategorii (null = wszystkie produkty)
+    function filterProducts(categoryName, title) {
+        const grid = document.getElementById('products-grid');
+        document.getElementById('catalog-title').innerText = title;
+
+        const filtered = categoryName
+            ? allProducts.filter(p => p.kategoria === categoryName)
+            : allProducts;
+
+        if (!filtered.length) {
+            grid.innerHTML = '<p>Brak produktów w tej kategorii.</p>';
+            return;
+        }
+        renderProducts(filtered, grid);
     }
 
     // Funkcja wstawiająca dane do HTML-a
@@ -230,12 +319,56 @@
         });
     }
 
+    // Koszyk trzymamy w localStorage jako mapę: { produkt_id: liczba_sztuk }
     function addToCart(productId) {
-        alert("Wysłanie ID: " + productId + " do API, aby odpalić p_utworz_szybkie_zamowienie!");
+        const cart = JSON.parse(localStorage.getItem('cart') || '{}');
+        cart[productId] = (cart[productId] || 0) + 1;
+        localStorage.setItem('cart', JSON.stringify(cart));
+        updateCartCount();
+    }
+
+    function updateCartCount() {
+        const cart = JSON.parse(localStorage.getItem('cart') || '{}');
+        const count = Object.values(cart).reduce((sum, qty) => sum + qty, 0);
+        document.getElementById('cartBtn').innerText = `🛒 Koszyk (${count})`;
+    }
+
+    // Jeśli użytkownik jest zalogowany, przycisk "Zaloguj się" zmienia się w "Wyloguj"
+    function updateAuthButton() {
+        const authBtn = document.getElementById('authBtn');
+        const accountBtn = document.getElementById('accountBtn');
+        if (localStorage.getItem('token')) {
+            authBtn.innerText = 'Wyloguj';
+            authBtn.href = '#';
+            authBtn.onclick = logout;
+            // Zalogowany widzi wejście do swojego panelu (admin - do panelu administratora)
+            const isAdmin = localStorage.getItem('role') === 'admin';
+            accountBtn.innerText = isAdmin ? 'Panel admina' : 'Moje konto';
+            accountBtn.href = isAdmin ? '/admin' : '/account';
+            accountBtn.style.display = 'inline-block';
+        } else {
+            authBtn.innerText = 'Zaloguj się';
+            authBtn.href = '/login_page';
+            authBtn.onclick = null;
+            accountBtn.style.display = 'none';
+        }
+    }
+
+    function logout(event) {
+        event.preventDefault();
+        localStorage.removeItem('token');
+        localStorage.removeItem('role');
+        alert('Wylogowano');
+        // Strona wraca do oryginalnego stanu (przycisk "Zaloguj się")
+        updateAuthButton();
     }
 
     // Uruchom pobieranie po wczytaniu strony
-    window.onload = fetchProducts;
+    window.onload = function() {
+        fetchProducts();
+        updateAuthButton();
+        updateCartCount();
+    };
 </script>
 </body>
 </html>
