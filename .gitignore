@@ -1,0 +1,13 @@
+# Python
+__pycache__/
+*.pyc
+
+# Środowisko wirtualne
+.venv/
+venv/
+
+# PyCharm
+.idea/
+
+# Claude Code
+CLAUDE.md
